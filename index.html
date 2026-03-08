@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Textlist - TTT Supreme Stable</title>
+    <style>
+        :root {
+            --bg: #0d0d0d;
+            --sidebar-bg: #161616;
+            --card-bg: #1f1f1f;
+            --primary: #00d1ff;
+            --star: #f1c40f;
+            --text: #e0e0e0;
+            --text-dim: #888888;
+            --accent: #2a2a2a;
+            --danger: #ff4d4d;
+            --highlight-bg: rgba(0, 209, 255, 0.15);
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background-color: var(--bg); color: var(--text);
+            margin: 0; display: flex; height: 100vh; overflow: hidden;
+        }
+
+        /* --- 사이드바 --- */
+        #sidebar {
+            width: 300px; background: var(--sidebar-bg);
+            display: flex; flex-direction: column; padding: 20px 10px;
+            border-right: 1px solid var(--accent);
+            z-index: 1001;
+        }
+
+        #main-container { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding-bottom: 150px; scroll-behavior: smooth; }
+        
+        header { 
+            padding: 15px 40px; display: flex; justify-content: space-between; align-items: center;
+            background: rgba(13, 13, 13, 0.9); border-bottom: 1px solid var(--accent); position: sticky; top: 0; z-index: 100;
+        }
+
+        .btn-auth { 
+            background: linear-gradient(135deg, rgba(0, 209, 255, 0.1), rgba(0, 209, 255, 0.05));
+            border: 1px solid var(--primary); color: var(--primary);
+            padding: 8px 24px; border-radius: 30px; font-size: 13px; font-weight: 700;
+            cursor: pointer; transition: 0.3s ease; box-shadow: 0 0 10px rgba(0, 209, 255, 0.15);
+            text-transform: uppercase; letter-spacing: 1.2px;
+        }
+
+        .layout { display: flex; gap: 30px; padding: 25px 40px; align-items: flex-start; }
+
+        /* --- 에디터 섹션 --- */
+        .editor-section {
+            background: var(--card-bg); padding: 25px; border-radius: 15px; 
+            display: flex; flex-direction: column; gap: 15px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4); 
+            position: sticky; top: 20px; border: 1px solid var(--accent);
+            resize: both; overflow: auto; min-width: 350px; max-width: 800px; min-height: 400px; width: 450px;
+        }
+
+        .editor-section::-webkit-resizer { background-color: var(--accent); border: 3px solid var(--primary); border-radius: 5px; }
+
+        textarea { flex: 1; background: #111; border: 1px solid var(--accent); border-radius: 8px; color: white; padding: 15px; font-size: 15px; outline: none; line-height: 1.6; resize: none; }
+        input { background: #111; border: 1px solid var(--accent); border-radius: 8px; color: white; padding: 12px; font-size: 14px; outline: none; }
+        .btn-main { background: var(--primary); color: black; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.3s; flex-shrink: 0; }
+
+        /* --- 텍스트리스트 섹션 --- */
+        .track-list-section { flex: 1; min-width: 300px; }
+        .track-list { display: flex; flex-direction: column; gap: 15px; }
+        .track-item {
+            background: var(--card-bg); padding: 22px; border-radius: 15px;
+            border: 1px solid var(--accent); border-left: 5px solid transparent; transition: 0.3s;
+            position: relative;
+        }
+        .track-item.active { border-color: var(--primary); border-left-color: var(--primary); background: #252525; transform: scale(1.01); }
+        .track-item.sort-mode { border: 1px dashed var(--primary); opacity: 0.8; }
+        
+        .drag-handle { display: none; position: absolute; left: -30px; top: 50%; transform: translateY(-50%); color: var(--primary); font-size: 24px; cursor: grab; padding: 10px; }
+        .sort-mode .drag-handle { display: block; }
+
+        .track-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-bottom: 12px; align-items: center; }
+        .track-body { font-size: 16px; line-height: 1.8; color: #ddd; }
+        .track-memo { font-size: 12px; color: var(--primary); text-decoration: none; margin-top: 10px; display: block; opacity: 0.8; }
+        .card-time-badge { font-size: 10px; background: rgba(0, 209, 255, 0.1); color: var(--primary); padding: 4px 10px; border-radius: 5px; float: right; margin-top: 10px; }
+
+        .sentence { transition: all 0.2s; padding: 2px 4px; border-radius: 4px; cursor: pointer; display: inline; }
+        .sentence.active { background: var(--highlight-bg); color: var(--primary); font-weight: 500; text-decoration: underline; text-underline-offset: 4px; }
+        .pos-btn { background: none; border: 1px solid var(--accent); color: var(--text-dim); padding: 4px 10px; border-radius: 4px; cursor: pointer; margin-left: 5px; font-size: 12px; }
+
+        /* --- 하단 플레이어 --- */
+        .player-bar {
+            position: fixed; bottom: 0; width: 100%; height: 110px;
+            background: rgba(13, 13, 13, 0.95); backdrop-filter: blur(15px);
+            border-top: 1px solid var(--accent); display: flex; align-items: center;
+            justify-content: space-between; padding: 0 40px; box-sizing: border-box; z-index: 1000;
+        }
+
+        .controls { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 45%; }
+        .circle-btn { width: 50px; height: 50px; border-radius: 50%; background: var(--primary); color: black; font-size: 24px; border: none; cursor: pointer; }
+        .opt-select { background: #1a1a1a; border: 1px solid var(--accent); color: var(--text); padding: 5px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+
+        .sidebar-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; border-radius: 8px; cursor: pointer; margin-bottom: 4px; color: var(--text-dim); font-size: 14px; }
+        .sidebar-item.active { background: var(--primary); color: black; font-weight: bold; }
+        .group-tools { display: none; gap: 8px; }
+        .sidebar-item:hover .group-tools { display: flex; }
+
+        .data-tools { padding: 15px 10px; border-top: 1px solid var(--accent); display: flex; flex-direction: column; gap: 8px; }
+        .btn-tool { background: transparent; border: 1px solid var(--accent); color: var(--text-dim); padding: 8px; border-radius: 6px; cursor: pointer; font-size: 11px; transition: 0.2s; }
+        .btn-tool:hover { border-color: var(--primary); color: var(--primary); }
+
+        @media (max-width: 1000px) {
+            #sidebar { display: none; }
+            #sidebar.mobile-show { display: flex; position: absolute; height: 100%; width: 280px; }
+            .layout { flex-direction: column; padding: 20px; }
+            .editor-section { width: 100% !important; max-width: none; resize: vertical; }
+            .player-bar { height: 140px; flex-direction: column; padding: 15px; }
+            .player-bar > div { width: 100% !important; justify-content: center !important; text-align: center; }
+            .controls { order: -1; }
+        }
+
+        .search-box { background: var(--card-bg); border: 1px solid var(--accent); padding: 10px 20px; border-radius: 25px; color: white; width: 280px; outline: none; }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2 style="padding: 0 15px; color: var(--primary); font-size: 22px; letter-spacing: -1px; margin-bottom: 20px;">Textlist TTT</h2>
+        
+        <div class="sidebar-item active" id="filter-all" onclick="setFilter('all')">📂 전체 목록</div>
+        <div class="sidebar-item" id="filter-starred" onclick="setFilter('starred')">⭐ 즐겨찾기</div>
+        
+        <div style="margin: 20px 15px 5px; font-size: 11px; color: var(--text-dim); font-weight: bold; text-transform: uppercase;">Library Groups</div>
+        <div id="group-list" style="flex: 1; overflow-y: auto;"></div>
+
+        <div class="data-tools">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; font-size:12px;">
+                <span>드래그 순서편집</span>
+                <input type="checkbox" id="sortModeToggle" onchange="toggleSortMode()">
+            </div>
+            <button class="btn-tool" onclick="exportData()">📥 Backup (JSON)</button>
+            <button class="btn-tool" onclick="document.getElementById('importFile').click()">📤 Restore (JSON)</button>
+            <input type="file" id="importFile" hidden onchange="importData(event)">
+            <button class="btn-tool" style="border-color: #442222; color: #884444;" onclick="resetAllData()">⚠️ 시스템 초기화</button>
+        </div>
+    </div>
+
+    <div id="main-container">
+        <header>
+            <button class="opt-select" id="menuToggle" onclick="toggleSidebar()" style="display:none; border-color: var(--primary);">Menu</button>
+            <input type="text" id="searchInput" class="search-box" placeholder="텍스트 검색... (/)" oninput="renderAll()">
+            <div class="auth-area">
+                <button class="btn-auth">Sign In</button>
+            </div>
+        </header>
+
+        <div class="layout">
+            <div class="editor-section" id="editorSection">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
+                    <h4 id="editor-title" style="margin:0; color:var(--primary); font-size: 18px;">새 텍스트 작성</h4>
+                    <span id="live-time" style="font-size:11px; color:var(--primary); font-weight: bold;">예상 시간: 0초</span>
+                </div>
+                <textarea id="input-content" placeholder="읽어줄 내용을 입력하세요... (Ctrl+Enter 저장)" oninput="updateLiveTime()"></textarea>
+                <div style="display:flex; flex-direction:column; gap:10px; flex-shrink:0;">
+                    <input type="text" id="input-url" placeholder="참조 URL 또는 기타 메모 (읽지 않음)">
+                    <input type="text" id="input-groups" placeholder="그룹 (쉼표 구분)">
+                </div>
+                <button class="btn-main" onclick="handleSave()">텍스트리스트 추가</button>
+                <button id="cancel-btn" style="display:none; color:var(--text-dim); cursor:pointer; margin-top:5px; background:none; border:none; font-size:12px; text-decoration: underline;" onclick="resetEditor()">수정 취소</button>
+            </div>
+
+            <div class="track-list-section">
+                <div id="playlist" class="track-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="player-bar">
+        <div style="width:25%">
+            <div id="np-title" style="font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:14px; color: var(--primary);">대기 중</div>
+            <div id="np-status" style="font-size:10px; color:var(--text-dim); margin-top:5px; font-weight:bold; display:none;">NOW READING</div>
+        </div>
+
+        <div class="controls">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <button onclick="skipSentence(-1)" style="background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:12px;">◀ 문장</button>
+                <button onclick="prevTrack()" style="background:none; border:none; color:var(--text-dim); font-size:24px; cursor:pointer;">⏮</button>
+                <button id="playBtn" onclick="togglePlay()" class="circle-btn">▶</button>
+                <button onclick="nextTrack()" style="background:none; border:none; color:var(--text-dim); font-size:24px; cursor:pointer;">⏭</button>
+                <button onclick="skipSentence(1)" style="background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:12px;">문장 ▶</button>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <select class="opt-select" id="playbackMode" onchange="playbackMode = this.value">
+                    <option value="once">한 번만 읽기</option>
+                    <option value="loop">그룹 반복</option>
+                    <option value="next">다음 그룹 이동</option>
+                </select>
+                <select class="opt-select" id="sleepTimer" onchange="startTimer(this.value)">
+                    <option value="0">⏳ 타이머 OFF</option>
+                    <option value="15">15분</option>
+                    <option value="30">30분</option>
+                    <option value="60">60분</option>
+                </select>
+                <span id="timerDisplay" style="font-size:11px; color:var(--primary); font-weight:bold;"></span>
+            </div>
+        </div>
+
+        <div style="width:25%; display:flex; justify-content:flex-end; gap:10px; align-items:center;">
+            <select class="opt-select" id="voiceSelect" style="max-width:100px;"></select>
+            <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1" style="width:60px;">
+        </div>
+    </div>
+
+    <script>
+        let tracks = JSON.parse(localStorage.getItem('ttt_stable_ultimate')) || [];
+        let currentFilter = 'all';
+        let playbackMode = 'once';
+        let currentTrackIdx = 0;
+        let currentSentIdx = 0;
+        let isPlaying = false;
+        let sortMode = false;
+        let timerId = null;
+        let editingId = null;
+
+        // 클릭 방어 변수
+        let mouseStartPos = { x: 0, y: 0 };
+        let mouseStartTime = 0;
+
+        const synth = window.speechSynthesis;
+
+        window.onload = () => { 
+            loadVoices(); 
+            renderAll(); 
+            const savedSize = JSON.parse(localStorage.getItem('ttt_workspace_size'));
+            if(savedSize) {
+                const el = document.getElementById('editorSection');
+                el.style.width = savedSize.w;
+                el.style.height = savedSize.h;
+            }
+            if (window.innerWidth <= 1000) document.getElementById('menuToggle').style.display = 'block';
+            if (synth.onvoiceschanged !== undefined) synth.onvoiceschanged = loadVoices; 
+        };
+
+        const editorResizeObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                const size = { w: entry.target.style.width, h: entry.target.style.height };
+                localStorage.setItem('ttt_workspace_size', JSON.stringify(size));
+            }
+        });
+        editorResizeObserver.observe(document.getElementById('editorSection'));
+
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('mobile-show'); }
+        function loadVoices() {
+            const select = document.getElementById('voiceSelect');
+            const voices = synth.getVoices();
+            select.innerHTML = voices.filter(v => v.lang.includes('ko') || v.lang.includes('en')).map(v => `<option value="${v.name}">${v.name}</option>`).join('');
+        }
+
+        function calculateTime(text) { return text ? Math.ceil(text.length / 10) : 0; }
+        function updateLiveTime() {
+            const sec = calculateTime(document.getElementById('input-content').value);
+            document.getElementById('live-time').textContent = `예상 시간: 약 ${sec}초`;
+        }
+
+        function splitSentences(text) { return text.match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/g) || [text]; }
+
+        // --- 클릭 방어 기능 ---
+        function handleMouseDown(e) {
+            mouseStartPos = { x: e.clientX, y: e.clientY };
+            mouseStartTime = Date.now();
+        }
+
+        function handleMouseUp(trackIdx, sentIdx, e) {
+            const moveX = Math.abs(e.clientX - mouseStartPos.x);
+            const moveY = Math.abs(e.clientY - mouseStartPos.y);
+            const duration = Date.now() - mouseStartTime;
+
+            // 이동 거리가 5px 이하이고 클릭 시간이 300ms 이하일 때만 클릭으로 간주
+            if (moveX < 5 && moveY < 5 && duration < 300) {
+                playFrom(trackIdx, sentIdx);
+            }
+        }
+
+        function speak() {
+            synth.cancel();
+            const list = getFilteredList();
+            if (!list[currentTrackIdx]) return;
+            const sentences = splitSentences(list[currentTrackIdx].content);
+            if (currentSentIdx >= sentences.length) { moveToNextTrack(); return; }
+
+            const utterance = new SpeechSynthesisUtterance(sentences[currentSentIdx].trim());
+            utterance.voice = synth.getVoices().find(v => v.name === document.getElementById('voiceSelect').value);
+            utterance.rate = document.getElementById('rate').value;
+
+            utterance.onstart = () => { isPlaying = true; updateUI(); highlightSentence(); };
+            utterance.onend = () => { if (isPlaying) { currentSentIdx++; speak(); } };
+            synth.speak(utterance);
+        }
+
+        function highlightSentence() {
+            document.querySelectorAll('.sentence').forEach(s => s.classList.remove('active'));
+            const active = document.querySelector(`#track-${currentTrackIdx} .sent-${currentSentIdx}`);
+            if (active) { active.classList.add('active'); active.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        }
+
+        function togglePlay() { isPlaying ? synth.cancel() : speak(); isPlaying = !isPlaying; updateUI(); }
+        function skipSentence(dir) { currentSentIdx += dir; speak(); }
+        function nextTrack() { currentTrackIdx++; currentSentIdx = 0; speak(); }
+        function prevTrack() { if(currentTrackIdx > 0) currentTrackIdx--; currentSentIdx = 0; speak(); }
+        function playFrom(ti, si) { if(sortMode) return; currentTrackIdx = ti; currentSentIdx = si; speak(); }
+
+        function moveToNextTrack() {
+            const list = getFilteredList();
+            if (currentTrackIdx < list.length - 1) { currentTrackIdx++; currentSentIdx = 0; speak(); }
+            else { if (playbackMode === 'loop') { currentTrackIdx = 0; currentSentIdx = 0; speak(); } else { isPlaying = false; updateUI(); } }
+        }
+
+        function handleSave() {
+            const content = document.getElementById('input-content').value.trim();
+            const url = document.getElementById('input-url').value.trim();
+            const groups = document.getElementById('input-groups').value.split(',').map(g => g.trim()).filter(g => g !== "");
+            if (!content) return;
+
+            if (editingId) {
+                const idx = tracks.findIndex(t => t.id === editingId);
+                tracks[idx] = { ...tracks[idx], content, url, groups, updatedAt: new Date().toLocaleString() };
+            } else {
+                // 신규 추가 시 push를 사용하여 리스트 아래쪽에 배치
+                tracks.push({ id: Date.now(), content, url, groups, createdAt: new Date().toLocaleString(), starred: false });
+            }
+            saveAndRender(); resetEditor();
+        }
+
+        function saveAndRender() { 
+            localStorage.setItem('ttt_stable_ultimate', JSON.stringify(tracks)); 
+            renderAll(); 
+            // 재생 중인 상태라면 UI를 다시 한번 동기화 (읽고 있던 상태 유지)
+            if (isPlaying) updateUI();
+        }
+
+        function renderAll() {
+            const listEl = document.getElementById('playlist');
+            const filtered = getFilteredList();
+            listEl.innerHTML = filtered.map((track, i) => {
+                const sentences = splitSentences(track.content);
+                const sentenceHTML = sentences.map((s, si) => 
+                    `<span class="sentence sent-${si} ${i === currentTrackIdx && si === currentSentIdx && isPlaying ? 'active' : ''}" 
+                           onmousedown="handleMouseDown(event)"
+                           onmouseup="handleMouseUp(${i}, ${si}, event)">${s}</span>`
+                ).join('');
+                return `
+                <div class="track-item ${i === currentTrackIdx && isPlaying ? 'active' : ''} ${sortMode ? 'sort-mode' : ''}" id="track-${i}" draggable="${sortMode}" ondragstart="handleDragStart(${tracks.indexOf(track)})" ondrop="handleDrop(${tracks.indexOf(track)})" ondragover="event.preventDefault()">
+                    <span class="drag-handle">⋮⋮</span>
+                    <div class="track-meta">
+                        <div style="display:flex; align-items:center;">
+                            <span onclick="toggleStar(${track.id}, event)" style="cursor:pointer; color:${track.starred ? 'var(--star)' : 'var(--text-dim)'}; font-size:16px;">${track.starred ? '★' : '☆'}</span>
+                            <span style="margin-left:10px;">${track.updatedAt || track.createdAt}</span>
+                        </div>
+                        <div>
+                            <button class="pos-btn" onclick="moveTrack(${track.id}, -1)">↑</button>
+                            <button class="pos-btn" onclick="moveTrack(${track.id}, 1)">↓</button>
+                            <span onclick="editTrack(${track.id})" style="cursor:pointer; margin-left:10px;">Edit</span>
+                            <span onclick="deleteTrack(${track.id})" style="cursor:pointer; color:var(--danger); margin-left:10px;">Del</span>
+                        </div>
+                    </div>
+                    <div class="track-body">${sentenceHTML}</div>
+                    ${track.url ? `<div class="track-memo">🔗 MEMO: ${track.url}</div>` : ''}
+                    <div class="card-time-badge">약 ${calculateTime(track.content)}초 분량</div>
+                </div>`;
+            }).join('');
+
+            const groups = [...new Set(tracks.flatMap(t => t.groups))].sort();
+            document.getElementById('group-list').innerHTML = groups.map(g => `
+                <div class="sidebar-item ${currentFilter === g ? 'active' : ''}" onclick="setFilter('${g}')">
+                    <span># ${g}</span>
+                    <div class="group-tools">
+                        <span style="cursor:pointer;" onclick="event.stopPropagation(); renameGroup('${g}')">✏️</span>
+                        <span style="cursor:pointer; margin-left:5px;" onclick="event.stopPropagation(); deleteGroup('${g}')">🗑️</span>
+                    </div>
+                </div>
+            `).join('');
+            
+            // 재생 중인 문장 하이라이트 유지
+            if (isPlaying) highlightSentence();
+        }
+
+        // --- 기타 로직 ---
+        function getFilteredList() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            return tracks.filter(t => (currentFilter === 'all' ? true : currentFilter === 'starred' ? t.starred : t.groups.includes(currentFilter)) && t.content.toLowerCase().includes(search));
+        }
+        function updateUI() {
+            const list = getFilteredList();
+            document.getElementById('np-title').textContent = list[currentTrackIdx] ? list[currentTrackIdx].content : "대기 중";
+            document.getElementById('playBtn').textContent = isPlaying ? "⏸" : "▶";
+            document.getElementById('np-status').style.display = isPlaying ? "block" : "none";
+        }
+        function startTimer(mins) {
+            clearInterval(timerId); if (mins == 0) { document.getElementById('timerDisplay').textContent = ""; return; }
+            let seconds = mins * 60;
+            timerId = setInterval(() => {
+                seconds--; const m = Math.floor(seconds / 60); const s = seconds % 60;
+                document.getElementById('timerDisplay').textContent = `${m}:${s < 10 ? '0' : ''}${s}`;
+                if (seconds <= 0) { clearInterval(timerId); isPlaying = false; synth.cancel(); updateUI(); }
+            }, 1000);
+        }
+        function toggleSortMode() { sortMode = document.getElementById('sortModeToggle').checked; renderAll(); }
+        let dragIdx;
+        function handleDragStart(i) { if(!sortMode) return; dragIdx = i; }
+        function handleDrop(i) { if(!sortMode) return; const moved = tracks.splice(dragIdx, 1)[0]; tracks.splice(i, 0, moved); saveAndRender(); }
+        function renameGroup(old) { const n = prompt("새 이름:", old); if(n && n !== old) { tracks.forEach(t => { const i = t.groups.indexOf(old); if(i > -1) t.groups[i] = n; }); if(currentFilter === old) currentFilter = n; saveAndRender(); } }
+        function deleteGroup(g) { if(confirm("그룹 제거?")) { tracks.forEach(t => { t.groups = t.groups.filter(x => x !== g); }); if(currentFilter === g) currentFilter = 'all'; saveAndRender(); } }
+        function setFilter(f) { currentFilter = f; currentTrackIdx = 0; currentSentIdx = 0; renderAll(); }
+        function toggleStar(id, e) { e.stopPropagation(); const t = tracks.find(x => x.id === id); t.starred = !t.starred; saveAndRender(); }
+        function deleteTrack(id) { if(confirm("삭제?")) { tracks = tracks.filter(x => x.id !== id); saveAndRender(); } }
+        function editTrack(id) { const t = tracks.find(x => x.id === id); editingId = id; document.getElementById('input-content').value = t.content; document.getElementById('input-url').value = t.url || ""; document.getElementById('input-groups').value = t.groups.join(', '); document.getElementById('editor-title').textContent = "수정 중"; document.getElementById('cancel-btn').style.display = "block"; updateLiveTime(); }
+        function resetEditor() { editingId = null; document.getElementById('input-content').value = ""; document.getElementById('input-url').value = ""; document.getElementById('input-groups').value = ""; document.getElementById('editor-title').textContent = "새 텍스트 작성"; document.getElementById('cancel-btn').style.display = "none"; updateLiveTime(); }
+        function exportData() { const blob = new Blob([JSON.stringify(tracks)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `ttt_data.json`; a.click(); }
+        function importData(event) { const file = event.target.files[0]; const reader = new FileReader(); reader.onload = (e) => { tracks = [...JSON.parse(e.target.result), ...tracks]; saveAndRender(); }; reader.readAsText(file); }
+        function moveTrack(id, dir) { const idx = tracks.findIndex(t => t.id === id); if (dir === -1 && idx > 0) [tracks[idx-1], tracks[idx]] = [tracks[idx], tracks[idx-1]]; else if (dir === 1 && idx < tracks.length - 1) [tracks[idx+1], tracks[idx]] = [tracks[idx], tracks[idx+1]]; saveAndRender(); }
+        function resetAllData() { if (confirm("전체 초기화?")) { tracks = []; localStorage.removeItem('ttt_stable_ultimate'); location.reload(); } }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') {
+                if (e.ctrlKey && e.key === 'Enter') handleSave();
+                if (e.key === 'Escape') resetEditor();
+                return;
+            }
+            if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+            if (e.key === 'ArrowRight') nextTrack();
+            if (e.key === 'ArrowLeft') prevTrack();
+            if (e.key === ']') skipSentence(1);
+            if (e.key === '[') skipSentence(-1);
+            if (e.key === '/') { e.preventDefault(); document.getElementById('searchInput').focus(); }
+        });
+    </script>
+</body>
+</html>
